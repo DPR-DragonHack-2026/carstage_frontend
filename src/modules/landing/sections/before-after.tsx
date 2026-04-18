@@ -11,10 +11,20 @@ import { SectionHeading } from "@/modules/landing/sections/section-heading";
 
 const SECTION_ID = "before-after";
 
-const beforeAfterHighlights = [
-  "Lot photo to studio render in 12s",
-  "$0 photographer fees and zero studio rental",
-  "Consistent, on-brand visuals across your entire inventory",
+type HighlightIcon = "timer" | "coins" | "sparkle";
+
+interface BeforeAfterHighlight {
+  text: string;
+  icon: HighlightIcon;
+}
+
+const beforeAfterHighlights: BeforeAfterHighlight[] = [
+  { icon: "timer", text: "Lot photo to studio render in 12s" },
+  { icon: "coins", text: "$0 photographer fees and zero studio rental" },
+  {
+    icon: "sparkle",
+    text: "Consistent, on-brand visuals across your entire inventory",
+  },
 ];
 
 export function BeforeAfter() {
@@ -32,7 +42,7 @@ export function BeforeAfter() {
           subtitle="Drag the handle to compare a raw lot photo with a CarStage AI render."
         />
 
-        <div className="mx-auto mt-10 flex w-full max-w-5xl flex-col gap-6 lg:grid lg:grid-cols-[1fr_220px]">
+        <div className="mt-10 flex w-full flex-col gap-6 lg:grid lg:grid-cols-[1fr_260px]">
           <BeforeAfterSlider example={active} />
           <ExampleSwitcher activeId={activeId} onSelect={setActiveId} />
         </div>
@@ -240,32 +250,74 @@ function BeforeAfterHighlights() {
     <ul className="space-y-2 border-t border-white/5 px-5 py-4">
       {beforeAfterHighlights.map((item) => (
         <li
-          key={item}
+          key={item.text}
           className="flex items-start gap-3 text-sm text-slate-200"
         >
-          <BulletIcon />
-          <span>{item}</span>
+          <HighlightIconGlyph name={item.icon} />
+          <span>{item.text}</span>
         </li>
       ))}
     </ul>
   );
 }
 
-function BulletIcon() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      aria-hidden
-      className="mt-[3px] h-4 w-4 flex-shrink-0 text-orange-400"
-    >
-      <path
-        d="M3 8l3.5 3.5L13 5"
+function HighlightIconGlyph({ name }: { name: HighlightIcon }) {
+  const iconClass = "mt-[2px] h-5 w-5 flex-shrink-0 text-orange-400";
+
+  if (name === "timer") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
+        className={iconClass}
+      >
+        <path d="M9 2h6" />
+        <path d="M12 14v-4" />
+        <circle cx="12" cy="14" r="8" />
+      </svg>
+    );
+  }
+
+  if (name === "coins") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={iconClass}
+      >
+        <ellipse cx="9" cy="8" rx="6" ry="3" />
+        <path d="M3 8v4c0 1.66 2.69 3 6 3s6-1.34 6-3V8" />
+        <path d="M3 12v4c0 1.66 2.69 3 6 3s6-1.34 6-3v-4" />
+        <ellipse cx="16" cy="16" rx="5" ry="2.5" />
+        <path d="M11 16v3c0 1.38 2.24 2.5 5 2.5s5-1.12 5-2.5v-3" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={iconClass}
+    >
+      <path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z" />
+      <path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" />
+      <path d="M5 4l.4 1.2 1.2.4-1.2.4L5 7.2l-.4-1.2-1.2-.4 1.2-.4z" />
     </svg>
   );
 }

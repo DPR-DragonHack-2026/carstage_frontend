@@ -17,8 +17,11 @@ export function HeroLanding() {
 
       <div className="relative mx-auto flex w-full max-w-7xl flex-col px-4 pb-10 pt-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/25 px-4 py-3 backdrop-blur-sm">
-          <Link href="/" className="flex items-center">
-            <img src="/logo.png" alt="CarStage AI logo" className="h-8 w-auto" />
+          <Link href="/" className="flex items-center gap-2">
+            <img src="/logo.png" alt="CarStage AI logo" className="h-10 w-auto" />
+            <span className="text-base font-bold tracking-wide text-slate-100">
+              CarStage<span className="text-orange-400">AI</span>
+            </span>
           </Link>
           <div className="flex items-center gap-2">
             <Link href="/login">
