@@ -5,8 +5,9 @@ import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { ProgressWithPercent } from "@/components/ui/progress-with-percent";
+import { BeforeAfterSlider } from "@/modules/gallery/before-after-slider";
 import { DeleteJobButton } from "@/modules/jobs/delete-job-button";
-import type { GenerationJob } from "@/types/carstage";
+import type { GenerationJob, StoredImage } from "@/types/carstage";
 
 interface JobCardProps {
   job: GenerationJob;
@@ -15,8 +16,19 @@ interface JobCardProps {
   priorityFirstImage?: boolean;
 }
 
+function pickBeforeUrl(
+  carImages: StoredImage[],
+  index: number
+): string | undefined {
+  return carImages[index]?.dataUrl ?? carImages[0]?.dataUrl;
+}
+
 export function JobCard({ job, onDeleted, priorityFirstImage }: JobCardProps) {
   const isRunning = job.status === "processing" || job.status === "queued";
+  const carImagesWithData = job.carImages.filter((img) => img.dataUrl);
+  const hasOriginals = carImagesWithData.length > 0;
+  const hasOutputs = job.outputs.length > 0;
+  const showSliders = hasOriginals && hasOutputs;
 
   return (
     <Card className="space-y-3">
@@ -41,11 +53,35 @@ export function JobCard({ job, onDeleted, priorityFirstImage }: JobCardProps) {
         {job.selectedBackgroundIds.length} backgrounds - {job.outputs.length} outputs
       </p>
       <ProgressWithPercent value={job.progress} />
-      {job.carImages.some((img) => img.dataUrl) && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {job.carImages
-            .filter((img) => img.dataUrl)
-            .map((image, thumbIndex) => (
+
+      {showSliders ? (
+        <div className="flex flex-col gap-3">
+          {job.outputs.map((output, index) => {
+            const beforeUrl = pickBeforeUrl(carImagesWithData, index);
+            if (!beforeUrl) {
+              return null;
+            }
+            return (
+              <div
+                key={output.id}
+                className="overflow-hidden rounded-md border border-slate-700"
+              >
+                <BeforeAfterSlider
+                  beforeUrl={beforeUrl}
+                  afterUrl={output.imageUrl}
+                  beforeAlt={`Original car ${index + 1}`}
+                  afterAlt={`Generated variation ${index + 1}`}
+                  aspectClassName="aspect-[16/9]"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        hasOriginals && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {carImagesWithData.map((image, thumbIndex) => (
               <div
                 key={image.id}
                 className="relative aspect-[4/3] w-full overflow-hidden rounded-md border border-slate-700"
@@ -64,8 +100,10 @@ export function JobCard({ job, onDeleted, priorityFirstImage }: JobCardProps) {
                 />
               </div>
             ))}
-        </div>
+          </div>
+        )
       )}
+
       <Link
         className="inline-flex text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline"
         href={`/jobs/${job.id}`}

@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/components/ui/cn";
+import { BeforeAfterSlider } from "@/modules/gallery/before-after-slider";
 import {
   beforeAfterExamples,
   type BeforeAfterExample,
@@ -43,11 +44,25 @@ export function BeforeAfter() {
         />
 
         <div className="mt-10 flex w-full flex-col gap-6 lg:grid lg:grid-cols-[1fr_260px]">
-          <BeforeAfterSlider example={active} />
+          <LandingComparePanel example={active} />
           <ExampleSwitcher activeId={activeId} onSelect={setActiveId} />
         </div>
       </div>
     </section>
+  );
+}
+
+function LandingComparePanel({ example }: { example: BeforeAfterExample }) {
+  return (
+    <div className="glass-panel relative overflow-hidden rounded-3xl">
+      <BeforeAfterSlider
+        beforeUrl={example.beforeUrl}
+        afterUrl={example.afterUrl}
+        beforeAlt={`${example.label} before`}
+        afterAlt={`${example.label} after`}
+      />
+      <BeforeAfterHighlights />
+    </div>
   );
 }
 
@@ -97,150 +112,6 @@ function ExampleSwitcher({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-const TWO_PI = Math.PI * 2;
-const ANGULAR_SPEED = 0.0011;
-
-function positionFromPhase(phase: number): number {
-  return 50 - 50 * Math.cos(phase);
-}
-
-function phaseFromPosition(position: number, currentPhase: number): number {
-  const clamped = Math.max(0, Math.min(100, position));
-  const baseAngle = Math.acos((50 - clamped) / 50);
-  const cycleStart = Math.floor(currentPhase / TWO_PI) * TWO_PI;
-  const phaseInCycle = currentPhase - cycleStart;
-  return phaseInCycle <= Math.PI
-    ? cycleStart + baseAngle
-    : cycleStart + TWO_PI - baseAngle;
-}
-
-function BeforeAfterSlider({ example }: { example: BeforeAfterExample }) {
-  const initialPosition = 15;
-  const [position, setPosition] = useState<number>(initialPosition);
-  const [isAutoplaying, setIsAutoplaying] = useState<boolean>(true);
-  const isAutoplayingRef = useRef<boolean>(true);
-  const phaseRef = useRef<number>(Math.acos((50 - initialPosition) / 50));
-
-  useEffect(() => {
-    isAutoplayingRef.current = isAutoplaying;
-  }, [isAutoplaying]);
-
-  useEffect(() => {
-    let rafId = 0;
-    let lastTimestamp: number | null = null;
-
-    const tick = (timestamp: number) => {
-      if (!isAutoplayingRef.current) {
-        lastTimestamp = null;
-        rafId = requestAnimationFrame(tick);
-        return;
-      }
-      if (lastTimestamp === null) {
-        lastTimestamp = timestamp;
-      }
-      const delta = timestamp - lastTimestamp;
-      lastTimestamp = timestamp;
-
-      phaseRef.current += ANGULAR_SPEED * delta;
-      setPosition(positionFromPhase(phaseRef.current));
-
-      rafId = requestAnimationFrame(tick);
-    };
-
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
-
-  const pauseAutoplay = () => setIsAutoplaying(false);
-  const resumeAutoplay = () => setIsAutoplaying(true);
-
-  const handleManualChange = (next: number) => {
-    phaseRef.current = phaseFromPosition(next, phaseRef.current);
-    setPosition(next);
-  };
-
-  return (
-    <div className="glass-panel relative overflow-hidden rounded-3xl">
-      <div
-        className="relative aspect-[16/9] w-full select-none"
-        onPointerEnter={pauseAutoplay}
-        onPointerLeave={resumeAutoplay}
-      >
-        <Image
-          src={example.afterUrl}
-          alt={`${example.label} after`}
-          fill
-          sizes="(min-width: 1024px) 60vw, 100vw"
-          className="object-cover"
-        />
-        <div
-          className="absolute inset-0"
-          style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
-        >
-          <Image
-            src={example.beforeUrl}
-            alt={`${example.label} before`}
-            fill
-            sizes="(min-width: 1024px) 60vw, 100vw"
-            className="object-cover"
-          />
-        </div>
-
-        <SliderHandle position={position} isPulsing={isAutoplaying} />
-
-        <input
-          type="range"
-          min={0}
-          max={100}
-          step={0.1}
-          value={position}
-          onChange={(event) => handleManualChange(Number(event.target.value))}
-          onPointerDown={pauseAutoplay}
-          aria-label="Before / after comparison position"
-          className="absolute inset-0 h-full w-full cursor-ew-resize appearance-none bg-transparent opacity-0"
-        />
-
-        <BadgeLabel className="left-4 top-4 border-slate-700/70 bg-slate-950/70 text-slate-200">
-          Before
-        </BadgeLabel>
-        <BadgeLabel className="right-4 top-4 border-orange-500 bg-orange-700 text-white">
-          After
-        </BadgeLabel>
-      </div>
-      <BeforeAfterHighlights />
-    </div>
-  );
-}
-
-function SliderHandle({
-  position,
-  isPulsing,
-}: {
-  position: number;
-  isPulsing: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "pointer-events-none absolute inset-y-0 w-px bg-white/80 transition-shadow duration-300",
-        isPulsing
-          ? "animate-slider-line-pulse"
-          : "shadow-[0_0_12px_rgba(255,255,255,0.6)]"
-      )}
-      style={{ left: `${position}%` }}
-    >
-      <div
-        className={cn(
-          "absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border bg-slate-950/80 px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-white transition-colors duration-300",
-          isPulsing ? "border-orange-400/80" : "border-white/70"
-        )}
-      >
-        Drag
-      </div>
     </div>
   );
 }
@@ -319,24 +190,5 @@ function HighlightIconGlyph({ name }: { name: HighlightIcon }) {
       <path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" />
       <path d="M5 4l.4 1.2 1.2.4-1.2.4L5 7.2l-.4-1.2-1.2-.4 1.2-.4z" />
     </svg>
-  );
-}
-
-function BadgeLabel({
-  className,
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className={cn(
-        "absolute rounded-full border px-3 py-1 text-[10px] font-medium uppercase tracking-wider backdrop-blur-sm",
-        className
-      )}
-    >
-      {children}
-    </span>
   );
 }

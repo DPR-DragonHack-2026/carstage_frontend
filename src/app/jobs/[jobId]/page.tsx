@@ -198,7 +198,7 @@ export default function JobDetailPage() {
         </div>
       </Card>
 
-      <OutputGallery outputs={job.outputs} />
+      <OutputGallery outputs={job.outputs} carImages={job.carImages} />
     </div>
   );
 }
