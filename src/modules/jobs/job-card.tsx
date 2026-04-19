@@ -39,14 +39,25 @@ export function JobCard({ job, onDeleted }: JobCardProps) {
         {job.selectedBackgroundIds.length} backgrounds - {job.outputs.length} outputs
       </p>
       <ProgressWithPercent value={job.progress} />
-      {job.carImages[0] && job.carImages[0].dataUrl && (
-        <div className="relative h-36 w-full overflow-hidden rounded-md border border-slate-700">
-          <Image
-            src={job.carImages[0].dataUrl}
-            alt={job.carImages[0].name}
-            fill
-            className="object-cover"
-          />
+      {job.carImages.some((img) => img.dataUrl) && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {job.carImages
+            .filter((img) => img.dataUrl)
+            .map((image) => (
+              <div
+                key={image.id}
+                className="relative aspect-[4/3] w-full overflow-hidden rounded-md border border-slate-700"
+              >
+                <Image
+                  src={image.dataUrl}
+                  alt={image.name}
+                  fill
+                  sizes="(max-width: 640px) 50vw, 20vw"
+                  unoptimized={image.dataUrl.startsWith("http")}
+                  className="object-cover"
+                />
+              </div>
+            ))}
         </div>
       )}
       <Link

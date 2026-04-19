@@ -18,6 +18,10 @@ function downloadImage(url: string, fileName: string) {
   link.click();
 }
 
+function isRemoteHttpUrl(src: string): boolean {
+  return src.startsWith("http://") || src.startsWith("https://");
+}
+
 export function OutputGallery({ outputs }: OutputGalleryProps) {
   const downloadAll = () => {
     outputs.forEach((output, index) => {
@@ -41,6 +45,8 @@ export function OutputGallery({ outputs }: OutputGalleryProps) {
                 src={output.imageUrl}
                 alt={`Generated variation ${index + 1}`}
                 fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                unoptimized={isRemoteHttpUrl(output.imageUrl)}
                 className="rounded-t-lg object-cover"
               />
             </div>

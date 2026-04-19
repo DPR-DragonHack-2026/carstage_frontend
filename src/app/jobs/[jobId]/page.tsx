@@ -141,7 +141,17 @@ export default function JobDetailPage() {
                     key={image.id}
                     className="relative h-28 overflow-hidden rounded-md border border-slate-700"
                   >
-                    <Image src={image.dataUrl} alt={image.name} fill className="object-cover" />
+                    <Image
+                      src={image.dataUrl}
+                      alt={image.name}
+                      fill
+                      sizes="(max-width: 1024px) 50vw, 25vw"
+                      unoptimized={
+                        image.dataUrl.startsWith("http://") ||
+                        image.dataUrl.startsWith("https://")
+                      }
+                      className="object-cover"
+                    />
                   </div>
                 ) : (
                   <div

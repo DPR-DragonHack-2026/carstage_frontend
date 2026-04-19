@@ -3,6 +3,7 @@ import type { JobService } from "@/lib/api/contracts";
 import {
   syntheticQueuedJob,
   toGenerationJob,
+  type BackendJobStatus,
   type JobCreateResponse,
   type JobStatusResponse,
 } from "@/lib/api/job-mapping";
@@ -201,25 +202,224 @@ export async function listBackgrounds(): Promise<BackgroundOption[]> {
   return mockBackgrounds;
 }
 
-export async function listJobs(): Promise<GenerationJob[]> {
-  const local = listLocalJobs();
-  if (!local.length) {
-    return [];
+function extractJobsArray(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && typeof payload === "object") {
+    const o = payload as Record<string, unknown>;
+    for (const key of ["jobs", "items", "data", "results"]) {
+      const v = o[key];
+      if (Array.isArray(v)) {
+        return v;
+      }
+    }
+  }
+  return [];
+}
+
+function coerceStringArray(
+  row: Record<string, unknown>,
+  keys: string[]
+): string[] | undefined {
+  for (const key of keys) {
+    const v = row[key];
+    if (Array.isArray(v)) {
+      const urls = v.filter((x): x is string => typeof x === "string");
+      if (urls.length) {
+        return urls;
+      }
+    }
+  }
+  return undefined;
+}
+
+function coercePositiveInt(
+  row: Record<string, unknown>,
+  keys: string[]
+): number | undefined {
+  for (const key of keys) {
+    const v = row[key];
+    if (typeof v === "number" && Number.isFinite(v) && v >= 1) {
+      return Math.floor(v);
+    }
+  }
+  return undefined;
+}
+
+function coerceJobStatusRow(
+  row: Record<string, unknown>
+): JobStatusResponse | null {
+  const jobId =
+    typeof row.job_id === "string"
+      ? row.job_id
+      : typeof row.jobId === "string"
+        ? row.jobId
+        : null;
+  if (!jobId) {
+    return null;
   }
 
-  const enriched = await Promise.all(
-    local.map(async (meta) => {
+  const raw = row.status;
+  const status: BackendJobStatus =
+    raw === "queued" ||
+    raw === "running" ||
+    raw === "completed" ||
+    raw === "failed"
+      ? raw
+      : "queued";
+
+  const qp = row.queue_position ?? row.queuePosition;
+  const qc = row.queued_count ?? row.queuedCount;
+
+  const createdAt =
+    typeof row.created_at === "string"
+      ? row.created_at
+      : typeof row.createdAt === "string"
+        ? row.createdAt
+        : new Date().toISOString();
+
+  return {
+    job_id: jobId,
+    status,
+    queue_position: typeof qp === "number" ? qp : 0,
+    queued_count: typeof qc === "number" ? qc : 0,
+    run_id: (row.run_id ?? row.runId) as string | null | undefined,
+    model: (row.model as string | null | undefined) ?? null,
+    created_at: createdAt,
+    started_at: (row.started_at ?? row.startedAt) as string | null | undefined,
+    finished_at: (row.finished_at ?? row.finishedAt) as string | null | undefined,
+    error: (row.error as string | null | undefined) ?? null,
+    result_ready: Boolean(row.result_ready ?? row.resultReady),
+    result_urls: coerceStringArray(row, [
+      "result_urls",
+      "resultUrls",
+      "output_urls",
+      "outputUrls",
+    ]),
+    original_urls: coerceStringArray(row, [
+      "original_urls",
+      "originalUrls",
+      "car_urls",
+      "carUrls",
+    ]),
+    output_count: coercePositiveInt(row, [
+      "output_count",
+      "outputCount",
+      "result_count",
+      "resultCount",
+      "num_outputs",
+      "numOutputs",
+      "variations",
+    ]),
+    original_count: coercePositiveInt(row, [
+      "original_count",
+      "originalCount",
+      "car_count",
+      "carCount",
+    ]),
+    outputs: row.outputs ?? row.Outputs,
+  };
+}
+
+async function resolveJobsFromListPayload(
+  payload: unknown
+): Promise<JobStatusResponse[]> {
+  const rows = extractJobsArray(payload);
+  const direct: JobStatusResponse[] = [];
+  const idOnly: string[] = [];
+
+  for (const row of rows) {
+    if (typeof row === "string") {
+      idOnly.push(row);
+    } else if (row && typeof row === "object") {
+      const coerced = coerceJobStatusRow(row as Record<string, unknown>);
+      if (coerced) {
+        direct.push(coerced);
+      }
+    }
+  }
+
+  const fetched = await Promise.all(
+    idOnly.map(async (id) => {
       try {
-        const status = await fetchJobStatus(meta.jobId);
-        cacheTerminalStatus(meta, status);
-        return toGenerationJob(status, meta);
+        return await fetchJobStatus(id);
       } catch {
-        return toGenerationJob(fallbackStatusFromCache(meta), meta);
+        return null;
       }
     })
   );
 
-  return enriched.sort(
+  return [...direct, ...(fetched.filter(Boolean) as JobStatusResponse[])];
+}
+
+async function fetchJobsListFromApi(): Promise<JobStatusResponse[] | null> {
+  try {
+    const response = await fetch(`${PROXY_BASE}/jobs`, { cache: "no-store" });
+    if (!response.ok) {
+      return null;
+    }
+    const payload = await response.json();
+    return await resolveJobsFromListPayload(payload);
+  } catch {
+    return null;
+  }
+}
+
+export async function listJobs(): Promise<GenerationJob[]> {
+  const remoteList = await fetchJobsListFromApi();
+
+  const local = listLocalJobs();
+  const localById = new Map(local.map((m) => [m.jobId, m]));
+
+  const remoteById = new Map<string, JobStatusResponse>();
+  if (remoteList) {
+    for (const status of remoteList) {
+      remoteById.set(status.job_id, status);
+    }
+  }
+
+  const allIds = new Set<string>([
+    ...remoteById.keys(),
+    ...local.map((m) => m.jobId),
+  ]);
+
+  if (!allIds.size) {
+    return [];
+  }
+
+  const enriched = await Promise.all(
+    [...allIds].map(async (jobId) => {
+      const meta = localById.get(jobId);
+      const fromList = remoteById.get(jobId);
+
+      if (fromList) {
+        cacheTerminalStatus(meta, fromList);
+        try {
+          const fresh = await fetchJobStatus(jobId);
+          cacheTerminalStatus(meta, fresh);
+          return toGenerationJob(fresh, meta);
+        } catch {
+          return toGenerationJob(fromList, meta);
+        }
+      }
+
+      try {
+        const status = await fetchJobStatus(jobId);
+        cacheTerminalStatus(meta, status);
+        return toGenerationJob(status, meta);
+      } catch {
+        if (meta) {
+          return toGenerationJob(fallbackStatusFromCache(meta), meta);
+        }
+        return null;
+      }
+    })
+  );
+
+  const valid = enriched.filter((j): j is GenerationJob => j !== null);
+
+  return valid.sort(
     (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)
   );
 }
