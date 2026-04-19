@@ -80,6 +80,7 @@ export async function createJob(payload: CreateJobPayload): Promise<GenerationJo
     updatedAt: now,
     carImages: payload.carImages,
     logo: payload.logo,
+    licensePlate: payload.licensePlate?.trim() || undefined,
     selectedBackgroundIds: payload.selectedBackgroundIds,
     outputs: [],
   };

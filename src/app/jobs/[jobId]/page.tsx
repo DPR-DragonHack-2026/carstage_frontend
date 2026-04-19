@@ -101,6 +101,14 @@ export default function JobDetailPage() {
                 </span>
               ))}
             </div>
+            {job.licensePlate && (
+              <>
+                <p className="pt-2 text-sm font-semibold text-slate-300">License plate</p>
+                <span className="inline-flex items-center rounded-md border-2 border-black bg-white px-3 py-1 font-mono text-base font-bold uppercase tracking-[0.3em] text-slate-900">
+                  {job.licensePlate}
+                </span>
+              </>
+            )}
             {job.logo && (
               <>
                 <p className="pt-2 text-sm font-semibold text-slate-300">Logo</p>

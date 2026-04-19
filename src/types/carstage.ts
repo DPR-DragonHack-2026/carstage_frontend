@@ -30,6 +30,7 @@ export interface GenerationJob {
   updatedAt: string;
   carImages: StoredImage[];
   logo?: StoredImage;
+  licensePlate?: string;
   selectedBackgroundIds: string[];
   outputs: JobOutput[];
 }
@@ -38,5 +39,6 @@ export interface CreateJobPayload {
   title: string;
   carImages: StoredImage[];
   logo?: StoredImage;
+  licensePlate?: string;
   selectedBackgroundIds: string[];
 }
