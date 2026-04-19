@@ -75,6 +75,7 @@ export function BackgroundPicker({
                   src={background.imageUrl}
                   alt={background.name}
                   fill
+                  sizes="(max-width: 639px) 100vw, (max-width: 1279px) 50vw, 33vw"
                   className="object-cover transition-transform duration-200 ease-out group-hover:scale-110"
                 />
               </div>

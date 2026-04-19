@@ -40,6 +40,7 @@ export function HeroLanding() {
               alt="Premium sports car"
               fill
               priority
+              sizes="(max-width: 1280px) 100vw, 1280px"
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-slate-950/35" />
