@@ -81,8 +81,13 @@ export default function DashboardPage() {
           </Card>
         ) : jobs.length ? (
           <div className="grid gap-4 lg:grid-cols-2">
-            {jobs.slice(0, 4).map((job) => (
-              <JobCard key={job.id} job={job} onDeleted={handleDeleted} />
+            {jobs.slice(0, 4).map((job, index) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onDeleted={handleDeleted}
+                priorityFirstImage={index === 0}
+              />
             ))}
           </div>
         ) : (

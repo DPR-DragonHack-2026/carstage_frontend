@@ -11,9 +11,11 @@ import type { GenerationJob } from "@/types/carstage";
 interface JobCardProps {
   job: GenerationJob;
   onDeleted?: (jobId: string) => void;
+  /** When true, the first car thumbnail loads eagerly (LCP when this card is above the fold). */
+  priorityFirstImage?: boolean;
 }
 
-export function JobCard({ job, onDeleted }: JobCardProps) {
+export function JobCard({ job, onDeleted, priorityFirstImage }: JobCardProps) {
   const isRunning = job.status === "processing" || job.status === "queued";
 
   return (
@@ -43,7 +45,7 @@ export function JobCard({ job, onDeleted }: JobCardProps) {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {job.carImages
             .filter((img) => img.dataUrl)
-            .map((image) => (
+            .map((image, thumbIndex) => (
               <div
                 key={image.id}
                 className="relative aspect-[4/3] w-full overflow-hidden rounded-md border border-slate-700"
@@ -53,6 +55,10 @@ export function JobCard({ job, onDeleted }: JobCardProps) {
                   alt={image.name}
                   fill
                   sizes="(max-width: 640px) 50vw, 20vw"
+                  priority={Boolean(priorityFirstImage && thumbIndex === 0)}
+                  loading={
+                    priorityFirstImage && thumbIndex === 0 ? "eager" : undefined
+                  }
                   unoptimized={image.dataUrl.startsWith("http")}
                   className="object-cover"
                 />

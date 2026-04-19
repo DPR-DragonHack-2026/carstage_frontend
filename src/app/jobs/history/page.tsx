@@ -43,8 +43,13 @@ export default function JobHistoryPage() {
         </Card>
       ) : jobs.length ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          {jobs.map((job) => (
-            <JobCard key={job.id} job={job} onDeleted={handleDeleted} />
+          {jobs.map((job, index) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              onDeleted={handleDeleted}
+              priorityFirstImage={index === 0}
+            />
           ))}
         </div>
       ) : (
