@@ -9,4 +9,5 @@ export interface JobService {
   listJobs(): Promise<GenerationJob[]>;
   getJobById(jobId: string): Promise<GenerationJob | null>;
   createJob(payload: CreateJobPayload): Promise<GenerationJob>;
+  deleteJob(jobId: string): Promise<void>;
 }

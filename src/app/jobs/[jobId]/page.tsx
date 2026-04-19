@@ -2,19 +2,25 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import { formatRendererError } from "@/lib/api/errors";
 import { jobService } from "@/lib/api/jobs";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { ProgressWithPercent } from "@/components/ui/progress-with-percent";
 import { OutputGallery } from "@/modules/gallery/output-gallery";
 import type { GenerationJob } from "@/types/carstage";
+
+const TERMINAL_STATUSES = new Set(["completed", "failed"]);
+const POLL_INTERVAL_MS = 1500;
 
 export default function JobDetailPage() {
   const params = useParams<{ jobId: string }>();
   const [job, setJob] = useState<GenerationJob | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string>("");
+  const stopPollingRef = useRef(false);
 
   useEffect(() => {
     const jobId = params.jobId;
@@ -22,17 +28,37 @@ export default function JobDetailPage() {
       return;
     }
 
+    stopPollingRef.current = false;
+
     const load = async () => {
-      const result = await jobService.getJobById(jobId);
-      setJob(result);
-      setIsLoading(false);
+      try {
+        const result = await jobService.getJobById(jobId);
+        setJob(result);
+        setLoadError("");
+        if (result && TERMINAL_STATUSES.has(result.status)) {
+          stopPollingRef.current = true;
+        }
+      } catch (error) {
+        setLoadError(
+          error instanceof Error ? error.message : "Could not load job."
+        );
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     void load();
     const interval = window.setInterval(() => {
+      if (stopPollingRef.current) {
+        window.clearInterval(interval);
+        return;
+      }
       void load();
-    }, 1000);
-    return () => window.clearInterval(interval);
+    }, POLL_INTERVAL_MS);
+    return () => {
+      stopPollingRef.current = true;
+      window.clearInterval(interval);
+    };
   }, [params.jobId]);
 
   if (isLoading) {
@@ -66,7 +92,20 @@ export default function JobDetailPage() {
           </div>
           <StatusBadge status={job.status} />
         </div>
-        <Progress value={job.progress} />
+        <ProgressWithPercent value={job.progress} />
+        {job.status === "queued" && typeof job.queuePosition === "number" && (
+          <p className="text-xs text-slate-400">
+            Queue position: {job.queuePosition}
+          </p>
+        )}
+        {job.errorMessage && (
+          <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            {formatRendererError(job.errorMessage)}
+          </p>
+        )}
+        {loadError && (
+          <p className="text-xs text-red-300">Status fetch failed: {loadError}</p>
+        )}
       </Card>
 
       <Card className="space-y-4">
@@ -77,14 +116,23 @@ export default function JobDetailPage() {
               Car uploads ({job.carImages.length})
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {job.carImages.map((image) => (
-                <div
-                  key={image.id}
-                  className="relative h-28 overflow-hidden rounded-md border border-slate-700"
-                >
-                  <Image src={image.dataUrl} alt={image.name} fill className="object-cover" />
-                </div>
-              ))}
+              {job.carImages.map((image) =>
+                image.dataUrl ? (
+                  <div
+                    key={image.id}
+                    className="relative h-28 overflow-hidden rounded-md border border-slate-700"
+                  >
+                    <Image src={image.dataUrl} alt={image.name} fill className="object-cover" />
+                  </div>
+                ) : (
+                  <div
+                    key={image.id}
+                    className="flex h-28 items-center justify-center rounded-md border border-dashed border-slate-700 px-3 text-center text-xs text-slate-500"
+                  >
+                    Original car image not stored on this device.
+                  </div>
+                )
+              )}
             </div>
           </div>
           <div className="space-y-2">

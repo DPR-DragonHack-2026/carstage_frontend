@@ -48,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   pathname === item.href
-                    ? "bg-cyan-400 text-slate-950"
+                    ? "bg-blue-900 text-white"
                     : "text-slate-300 hover:bg-slate-800"
                 )}
               >

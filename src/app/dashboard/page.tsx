@@ -19,6 +19,11 @@ export default function DashboardPage() {
     });
   }, []);
 
+  const handleDelete = async (jobId: string) => {
+    await jobService.deleteJob(jobId);
+    setJobs((current) => current.filter((job) => job.id !== jobId));
+  };
+
   const stats = useMemo(() => {
     return {
       total: jobs.length,
@@ -78,7 +83,7 @@ export default function DashboardPage() {
         ) : jobs.length ? (
           <div className="grid gap-4 lg:grid-cols-2">
             {jobs.slice(0, 4).map((job) => (
-              <JobCard key={job.id} job={job} />
+              <JobCard key={job.id} job={job} onDelete={handleDelete} />
             ))}
           </div>
         ) : (

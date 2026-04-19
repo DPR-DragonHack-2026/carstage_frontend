@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/components/ui/cn";
-import { Progress } from "@/components/ui/progress";
+import { ProgressWithPercent } from "@/components/ui/progress-with-percent";
 import { TypewriterText } from "@/components/ui/typewriter-text";
 
 interface TypewriterWithProgressProps {
@@ -25,16 +25,7 @@ export function TypewriterWithProgress({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <div className="flex items-center gap-3">
-        <Progress
-          value={percent}
-          className="h-1.5 flex-1 bg-slate-800/80"
-          barClassName="bg-orange-500 transition-all duration-100 ease-linear"
-        />
-        <span className="min-w-[3ch] text-right text-[11px] font-semibold tabular-nums text-orange-400">
-          {percent}%
-        </span>
-      </div>
+      <ProgressWithPercent value={percent} />
       <TypewriterText
         text={text}
         speedMs={speedMs}

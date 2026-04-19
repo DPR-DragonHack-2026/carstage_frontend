@@ -1,120 +1,230 @@
 import { mockBackgrounds } from "@/lib/mocks/backgrounds";
-import { APP_STORAGE_KEYS, createId, wait } from "@/lib/utils";
 import type { JobService } from "@/lib/api/contracts";
+import {
+  syntheticQueuedJob,
+  toGenerationJob,
+  type JobCreateResponse,
+  type JobStatusResponse,
+} from "@/lib/api/job-mapping";
+import {
+  getLocalJob,
+  listLocalJobs,
+  removeLocalJob,
+  saveLocalJob,
+  type LocalJobMetadata,
+} from "@/lib/api/job-store";
 import type {
   BackgroundOption,
   CreateJobPayload,
   GenerationJob,
-  JobOutput,
+  StoredImage,
 } from "@/types/carstage";
 
-const OUTPUTS_PER_JOB = 6;
+const PROXY_BASE = "/api/showroom";
 
-function isBrowser(): boolean {
-  return typeof window !== "undefined";
+class ShowroomApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+    this.name = "ShowroomApiError";
+  }
 }
 
-function readJobs(): GenerationJob[] {
-  if (!isBrowser()) {
-    return [];
-  }
-  const raw = window.localStorage.getItem(APP_STORAGE_KEYS.jobs);
-  if (!raw) {
-    return [];
-  }
+async function readError(response: Response): Promise<string> {
   try {
-    const jobs = JSON.parse(raw) as GenerationJob[];
-    return jobs.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    const data = await response.json();
+    if (typeof data?.error === "string") {
+      return data.error;
+    }
+    if (typeof data?.detail === "string") {
+      return data.detail;
+    }
+    return JSON.stringify(data);
   } catch {
-    return [];
+    return response.statusText || "Request failed";
   }
 }
 
-function writeJobs(jobs: GenerationJob[]): void {
-  if (!isBrowser()) {
-    return;
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  const response = await fetch(dataUrl);
+  if (!response.ok) {
+    throw new Error("Could not read uploaded car image.");
   }
-  window.localStorage.setItem(APP_STORAGE_KEYS.jobs, JSON.stringify(jobs));
+  return response.blob();
 }
 
-function generateMockOutputs(jobId: string): JobOutput[] {
-  const createdAt = new Date().toISOString();
-  return Array.from({ length: OUTPUTS_PER_JOB }).map((_, index) => ({
-    id: createId(`output-${index + 1}`),
-    imageUrl: `https://picsum.photos/seed/${jobId}-${index + 1}/1280/720`,
-    createdAt,
-  }));
+function fileNameFor(image: StoredImage, fallback: string): string {
+  const trimmed = image.name?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : fallback;
+}
+
+async function fetchBackgroundBlob(
+  background: BackgroundOption
+): Promise<{ blob: Blob; fileName: string }> {
+  const response = await fetch(background.imageUrl);
+  if (!response.ok) {
+    throw new Error(
+      `Could not load background "${background.name}" (${response.status}).`
+    );
+  }
+  const blob = await response.blob();
+  const segments = background.imageUrl.split("/");
+  const fileName = segments[segments.length - 1] || "background.jpg";
+  return { blob, fileName };
+}
+
+function resolveBackground(
+  selectedBackgroundIds: string[]
+): BackgroundOption {
+  const id = selectedBackgroundIds[0];
+  if (!id) {
+    throw new Error("Pick a background before generating.");
+  }
+  const background = mockBackgrounds.find((entry) => entry.id === id);
+  if (!background) {
+    throw new Error(`Unknown background "${id}".`);
+  }
+  return background;
+}
+
+async function postCreateJob(
+  carImage: StoredImage,
+  background: BackgroundOption
+): Promise<JobCreateResponse> {
+  const carBlob = await dataUrlToBlob(carImage.dataUrl);
+  const { blob: bgBlob, fileName: bgFileName } = await fetchBackgroundBlob(
+    background
+  );
+
+  const formData = new FormData();
+  formData.set("car", carBlob, fileNameFor(carImage, "car.jpg"));
+  formData.set("bg", bgBlob, bgFileName);
+
+  const response = await fetch(`${PROXY_BASE}/jobs`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new ShowroomApiError(await readError(response), response.status);
+  }
+
+  return (await response.json()) as JobCreateResponse;
+}
+
+async function fetchJobStatus(jobId: string): Promise<JobStatusResponse> {
+  const response = await fetch(
+    `${PROXY_BASE}/jobs/${encodeURIComponent(jobId)}`,
+    { cache: "no-store" }
+  );
+  if (!response.ok) {
+    throw new ShowroomApiError(await readError(response), response.status);
+  }
+  return (await response.json()) as JobStatusResponse;
 }
 
 export async function listBackgrounds(): Promise<BackgroundOption[]> {
-  await wait(150);
   return mockBackgrounds;
 }
 
 export async function listJobs(): Promise<GenerationJob[]> {
-  await wait(200);
-  return readJobs();
+  const local = listLocalJobs();
+  if (!local.length) {
+    return [];
+  }
+
+  const enriched = await Promise.all(
+    local.map(async (meta) => {
+      try {
+        const status = await fetchJobStatus(meta.jobId);
+        return toGenerationJob(status, meta);
+      } catch {
+        return toGenerationJob(
+          {
+            job_id: meta.jobId,
+            status: "queued",
+            queue_position: 0,
+            queued_count: 0,
+            created_at: meta.createdAt,
+            result_ready: false,
+          },
+          meta
+        );
+      }
+    })
+  );
+
+  return enriched.sort(
+    (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)
+  );
 }
 
 export async function getJobById(jobId: string): Promise<GenerationJob | null> {
-  await wait(120);
-  const job = readJobs().find((item) => item.id === jobId);
-  return job ?? null;
+  const meta = getLocalJob(jobId);
+  try {
+    const status = await fetchJobStatus(jobId);
+    return toGenerationJob(status, meta);
+  } catch (error) {
+    if (error instanceof ShowroomApiError && error.status === 404) {
+      return meta
+        ? toGenerationJob(
+            {
+              job_id: jobId,
+              status: "failed",
+              queue_position: 0,
+              queued_count: 0,
+              created_at: meta.createdAt,
+              result_ready: false,
+              error: "Job not found on the backend.",
+            },
+            meta
+          )
+        : null;
+    }
+    throw error;
+  }
 }
 
-export async function createJob(payload: CreateJobPayload): Promise<GenerationJob> {
+export async function createJob(
+  payload: CreateJobPayload
+): Promise<GenerationJob> {
   if (!payload.carImages.length) {
     throw new Error("At least one car image is required.");
   }
-  if (!payload.selectedBackgroundIds.length) {
-    throw new Error("At least one background must be selected.");
+  if (payload.selectedBackgroundIds.length !== 1) {
+    throw new Error("Pick exactly one background.");
   }
 
-  const now = new Date().toISOString();
-  const job: GenerationJob = {
-    id: createId("job"),
-    title: payload.title.trim() || `Job ${new Date().toLocaleDateString()}`,
-    status: "queued",
-    progress: 10,
-    createdAt: now,
-    updatedAt: now,
-    carImages: payload.carImages,
+  const carImage = payload.carImages[0];
+  const background = resolveBackground(payload.selectedBackgroundIds);
+
+  const created = await postCreateJob(carImage, background);
+
+  const meta: LocalJobMetadata = {
+    jobId: created.job_id,
+    title:
+      payload.title.trim() ||
+      `Job ${new Date().toLocaleDateString()}`,
+    createdAt: new Date().toISOString(),
+    carImage,
     logo: payload.logo,
     licensePlate: payload.licensePlate?.trim() || undefined,
-    selectedBackgroundIds: payload.selectedBackgroundIds,
-    outputs: [],
+    selectedBackgroundId: background.id,
   };
+  saveLocalJob(meta);
 
-  const jobs = readJobs();
-  writeJobs([job, ...jobs]);
-
-  await wait(300);
-  const processing: GenerationJob = {
-    ...job,
-    status: "processing",
-    progress: 55,
-    updatedAt: new Date().toISOString(),
-  };
-  writeJobs([processing, ...jobs]);
-
-  await wait(700);
-  const completed: GenerationJob = {
-    ...processing,
-    status: "completed",
-    progress: 100,
-    outputs: generateMockOutputs(job.id),
-    updatedAt: new Date().toISOString(),
-  };
-  writeJobs([completed, ...jobs]);
-
-  return completed;
+  return syntheticQueuedJob(created, meta);
 }
 
-export const mockJobService: JobService = {
+export async function deleteJob(jobId: string): Promise<void> {
+  removeLocalJob(jobId);
+}
+
+export const httpJobService: JobService = {
   listBackgrounds,
   listJobs,
   getJobById,
   createJob,
+  deleteJob,
 };
 
-export const jobService: JobService = mockJobService;
+export const jobService: JobService = httpJobService;

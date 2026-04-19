@@ -33,6 +33,8 @@ export interface GenerationJob {
   licensePlate?: string;
   selectedBackgroundIds: string[];
   outputs: JobOutput[];
+  errorMessage?: string;
+  queuePosition?: number;
 }
 
 export interface CreateJobPayload {

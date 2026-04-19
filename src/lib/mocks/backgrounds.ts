@@ -8,6 +8,12 @@ export const mockBackgrounds: BackgroundOption[] = [
     imageUrl: "/backgrounds/modern_showroom.jpg",
   },
   {
+    id: "bg-white-showroom",
+    name: "White Showroom",
+    location: "Studio",
+    imageUrl: "/backgrounds/white_showroom.png",
+  },
+  {
     id: "bg-studio-showroom",
     name: "Studio Showroom",
     location: "Studio",
