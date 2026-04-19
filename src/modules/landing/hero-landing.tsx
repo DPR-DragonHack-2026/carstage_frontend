@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TypewriterText } from "@/components/ui/typewriter-text";
+import { TypewriterWithProgress } from "@/components/ui/typewriter-with-progress";
 
 const heroDescription =
   "Build professional automotive stage photos from raw car images with neon-grade lighting, premium scenes, and branded outputs.";
@@ -23,13 +24,16 @@ export function HeroLanding() {
               CarStage<span className="text-orange-400">AI</span>
             </span>
           </Link>
-          <div className="flex items-center gap-2">
-            <Link href="/login">
-              <Button variant="ghost">Login</Button>
-            </Link>
-            <Link href="/signup">
-              <Button variant="outline">Signup</Button>
-            </Link>
+          <div className="flex items-center gap-6">
+            <NavLinks />
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="accentOutline">Login</Button>
+              </Link>
+              <Link href="/signup">
+                <Button variant="accentSolid">Signup</Button>
+              </Link>
+            </div>
           </div>
         </header>
 
@@ -55,10 +59,10 @@ export function HeroLanding() {
                   <br />
                   without studio shoots
                 </h1>
-                <div className="inline-block max-w-xl rounded-xl border border-white/5 bg-slate-950/25 px-4 py-3 backdrop-blur-sm">
-                  <TypewriterText
+                <div className="inline-block w-full max-w-xl rounded-xl border border-white/5 bg-slate-950/25 px-4 py-3 backdrop-blur-sm">
+                  <TypewriterWithProgress
                     text={heroDescription}
-                    className="text-xs text-slate-100 sm:text-sm"
+                    textClassName="text-xs text-slate-100 sm:text-sm"
                     speedMs={22}
                     startDelayMs={150}
                   />
@@ -81,6 +85,28 @@ export function HeroLanding() {
         </section>
       </div>
     </div>
+  );
+}
+
+const navLinks = [
+  { label: "Features", href: "#" },
+  { label: "Pricing", href: "#" },
+  { label: "Contact", href: "#" },
+];
+
+function NavLinks() {
+  return (
+    <nav className="hidden items-center gap-5 md:flex">
+      {navLinks.map((link) => (
+        <Link
+          key={link.label}
+          href={link.href}
+          className="text-sm font-medium text-slate-300 transition-colors hover:text-white"
+        >
+          {link.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 

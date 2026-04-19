@@ -1,6 +1,11 @@
 import { cn } from "@/components/ui/cn";
 
-type ButtonVariant = "primary" | "outline" | "ghost";
+type ButtonVariant =
+  | "primary"
+  | "outline"
+  | "ghost"
+  | "accentOutline"
+  | "accentSolid";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -13,6 +18,10 @@ const variantStyles: Record<ButtonVariant, string> = {
     "border border-cyan-300/45 bg-slate-900 text-cyan-100 hover:bg-cyan-400/10 focus-visible:ring-cyan-300",
   ghost:
     "bg-transparent text-slate-300 hover:bg-slate-800/70 focus-visible:ring-cyan-300",
+  accentOutline:
+    "border border-orange-500 bg-transparent text-orange-400 hover:bg-orange-500 hover:text-slate-950 active:bg-orange-700 active:text-white focus-visible:ring-orange-300",
+  accentSolid:
+    "border border-orange-500 bg-orange-500 text-slate-950 hover:bg-orange-400 active:bg-orange-700 active:text-white focus-visible:ring-orange-300",
 };
 
 export function Button({

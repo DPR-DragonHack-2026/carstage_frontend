@@ -23,6 +23,7 @@ export interface PricingTier {
   ctaLabel: string;
   ctaHref: string;
   highlighted?: boolean;
+  featuredBadge?: string;
   customPill?: string;
 }
 
@@ -49,31 +50,25 @@ export const trustLogos: string[] = [
 
 export const beforeAfterExamples: BeforeAfterExample[] = [
   {
+    id: "ba-sport",
+    label: "Sports",
+    caption: "Driveway shot to magazine cover in 12s",
+    beforeUrl: "/porsche_raw.jpg",
+    afterUrl: "/porsche_overlay.jpg",
+  },
+  {
     id: "ba-sedan",
     label: "Sedan",
     caption: "Lot photo to studio render in 12s",
-    beforeUrl:
-      "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1400&q=60&sat=-100&blur=2",
-    afterUrl:
-      "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1400&q=85",
+    beforeUrl: "/bmw_raw.jpg",
+    afterUrl: "/bmw_overlay.jpg",
   },
   {
     id: "ba-suv",
     label: "SUV",
     caption: "Phone snap to neon showroom in seconds",
-    beforeUrl:
-      "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&fit=crop&w=1400&q=60&sat=-100",
-    afterUrl:
-      "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&fit=crop&w=1400&q=85",
-  },
-  {
-    id: "ba-sport",
-    label: "Sports",
-    caption: "Driveway shot to magazine cover",
-    beforeUrl:
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1400&q=60&sat=-100",
-    afterUrl:
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1400&q=85",
+    beforeUrl: "/volvo_raw.jpg",
+    afterUrl: "/volvo_overlay.jpg",
   },
 ];
 
@@ -97,46 +92,40 @@ export const howItWorksSteps: HowItWorksStep[] = [
 
 export const stageScenes: StageScene[] = [
   {
-    id: "scene-showroom",
+    id: "scene-lucid-showroom",
     name: "Modern Showroom",
-    location: "Los Angeles",
-    imageUrl:
-      "https://images.unsplash.com/photo-1583267746897-2cf415887172?auto=format&fit=crop&w=1280&q=80",
+    location: "Lucid Air",
+    imageUrl: "/combos/lucid_showroom.jpg",
   },
   {
-    id: "scene-night",
-    name: "Night Stage Lights",
-    location: "Chicago",
-    imageUrl:
-      "https://images.unsplash.com/photo-1493238792000-8113da705763?auto=format&fit=crop&w=1280&q=80",
-  },
-  {
-    id: "scene-sunset",
-    name: "City Sunset",
-    location: "Miami",
-    imageUrl:
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1280&q=80",
-  },
-  {
-    id: "scene-warehouse",
-    name: "Industrial Warehouse",
-    location: "Dallas",
-    imageUrl:
-      "https://images.unsplash.com/photo-1616422285623-13ff0162193c?auto=format&fit=crop&w=1280&q=80",
-  },
-  {
-    id: "scene-neon",
+    id: "scene-bmw-neon-garage",
     name: "Neon Garage",
-    location: "Tokyo",
-    imageUrl:
-      "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1280&q=80",
+    location: "BMW",
+    imageUrl: "/combos/bmw_neon_garage.jpg",
   },
   {
-    id: "scene-mountain",
+    id: "scene-benz-city-sunset",
+    name: "City Sunset",
+    location: "Mercedes-Benz",
+    imageUrl: "/combos/benz_city_sunset.jpg",
+  },
+  {
+    id: "scene-polestar-warehouse",
+    name: "Industrial Warehouse",
+    location: "Polestar",
+    imageUrl: "/combos/polestar_industrial_warehouse.jpg",
+  },
+  {
+    id: "scene-aston-garage",
+    name: "Private Garage",
+    location: "Aston Martin",
+    imageUrl: "/combos/aston_garage.jpg",
+  },
+  {
+    id: "scene-taycan-mountain",
     name: "Snowy Mountain Road",
-    location: "Aspen",
-    imageUrl:
-      "https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=1280&q=80",
+    location: "Porsche Taycan",
+    imageUrl: "/combos/taycan_snowy_mountain_road.jpg",
   },
 ];
 
@@ -163,40 +152,39 @@ export const roiStats: RoiStat[] = [
 
 export const pricingTiers: PricingTier[] = [
   {
-    id: "tier-starter",
-    name: "Starter",
-    price: "$29",
-    cadence: "/month",
-    blurb: "For solo dealers getting started.",
+    id: "tier-free",
+    name: "Free",
+    price: "$0",
+    cadence: "",
+    blurb: "Kick the tires. No credit card required.",
     features: [
-      "50 renders / month",
-      "10 stage presets",
-      "Watermark + logo overlay",
+      "5 free renders",
       "Standard export quality",
+      "Watermark + logo overlay",
+      "Pick from 10 stage presets",
     ],
     ctaLabel: "Start free",
     ctaHref: "/signup",
   },
   {
-    id: "tier-pro",
-    name: "Pro",
-    price: "$99",
-    cadence: "/month",
-    blurb: "For growing dealerships running daily inventory.",
+    id: "tier-credits",
+    name: "Pay as you go",
+    price: "$2",
+    cadence: "/credit",
+    blurb: "For solo sellers who render on demand.",
     features: [
-      "500 renders / month",
+      "1 credit = 1 render",
+      "Volume discounts past 50 credits",
       "Full stage library",
-      "Bulk processing",
       "HD exports + social presets",
-      "Priority rendering queue",
+      "No monthly commitment",
     ],
-    ctaLabel: "Start Pro trial",
+    ctaLabel: "Buy credits",
     ctaHref: "/signup",
-    highlighted: true,
   },
   {
-    id: "tier-group",
-    name: "Dealership Group",
+    id: "tier-dealership",
+    name: "Dealership",
     price: "Custom",
     cadence: "",
     blurb: "For multi-location groups and auction houses.",
@@ -207,8 +195,9 @@ export const pricingTiers: PricingTier[] = [
       "Dedicated success manager",
       "SLA + SSO",
     ],
-    ctaLabel: "Contact sales",
+    ctaLabel: "Talk to sales",
     ctaHref: "/signup",
-    customPill: "Custom",
+    highlighted: true,
+    featuredBadge: "Premium",
   },
 ];

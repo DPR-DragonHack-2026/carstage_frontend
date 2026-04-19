@@ -41,7 +41,7 @@ function PricingCard({ tier }: { tier: PricingTier }) {
     >
       {highlighted && (
         <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-orange-400/60 bg-orange-500 px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-slate-950">
-          Most popular
+          {tier.featuredBadge ?? "Most popular"}
         </span>
       )}
 

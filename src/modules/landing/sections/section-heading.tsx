@@ -1,3 +1,5 @@
+import { TypewriterText } from "@/components/ui/typewriter-text";
+
 interface SectionHeadingProps {
   eyebrow?: string;
   title: string;
@@ -32,7 +34,14 @@ export function SectionHeading({
       <h2 className="text-3xl font-medium uppercase leading-tight text-white sm:text-4xl">
         {title}
       </h2>
-      {subtitle && <p className="text-base text-slate-300">{subtitle}</p>}
+      {subtitle && (
+        <TypewriterText
+          text={subtitle}
+          className="text-base text-slate-300"
+          speedMs={22}
+          startDelayMs={250}
+        />
+      )}
     </div>
   );
 }
