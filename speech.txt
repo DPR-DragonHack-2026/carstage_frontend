@@ -1,0 +1,25 @@
+DRAGONHACK 2026 SPEECH - carstage.ai
+
+[Adam]
+So we have created a Saas for car dealerships. Taking good images for car listings is an expense
+both in time and labor. 
+Our solution streamlines this process by leveraging a combination of
+generative AI and a native mobile interface, which makes a process of creating professional
+snapshots of cars simple, fast and cheap.
+
+Generative AI can be an amazing tool, but is far from deterministic and may hallucinate parts 
+of the image. Some of this riks can be mitigated by optimizing a system prompt, but that only takes
+us so far.
+Tradeoff is: creative flexibility for realiability.
+A) We can pixel lock the car and use it as a mask, generate the background around it, but that skews 
+the perspective on the image for some backgrounds.
+
+B) We can let the model immerse the car into the background, but that sometimes results in hallucinated
+features on the output.
+
+We created a mobile interface that uses real-time on-device segmentation model, that lets a user
+take an optimal picture of their car. This way we can tell the model to pixel-lock the car
+and use the background in input as a sample to generate the output.
+
+This way we get reliable generated images of the car in as fast as 12s per sample, with options
+of choosing an arbitrary background and also rendering a dealership logo on a license plate.

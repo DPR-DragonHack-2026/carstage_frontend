@@ -19,7 +19,7 @@ import { LogoUploadPanel } from "@/modules/uploads/logo-upload-panel";
 import { SingleCarUpload } from "@/modules/uploads/single-car-upload";
 import type { BackgroundOption, GenerationJob, StoredImage } from "@/types/carstage";
 
-const PROGRESS_DURATION_MS = 15_000;
+const PROGRESS_DURATION_MS = 18_000;
 const POLL_INTERVAL_MS = 1_500;
 const POLL_TIMEOUT_MS = 5 * 60 * 1_000;
 const COMPLETION_HOLD_MS = 450;
@@ -283,7 +283,7 @@ function SingleImageForm({
       <FormSection
         step={6}
         title="Generate"
-        subtitle="Costs 1 credit. Render takes about 12 seconds."
+        subtitle="Costs 1 credit. Render takes about 18 seconds."
       >
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
           <Chip label={carImage ? "Car attached" : "No car attached"} />

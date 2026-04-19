@@ -3,13 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { formatRendererError } from "@/lib/api/errors";
 import { jobService } from "@/lib/api/jobs";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { ProgressWithPercent } from "@/components/ui/progress-with-percent";
 import { OutputGallery } from "@/modules/gallery/output-gallery";
+import { DeleteJobButton } from "@/modules/jobs/delete-job-button";
 import type { GenerationJob } from "@/types/carstage";
 
 const TERMINAL_STATUSES = new Set(["completed", "failed"]);
@@ -17,10 +18,15 @@ const POLL_INTERVAL_MS = 1500;
 
 export default function JobDetailPage() {
   const params = useParams<{ jobId: string }>();
+  const router = useRouter();
   const [job, setJob] = useState<GenerationJob | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>("");
   const stopPollingRef = useRef(false);
+
+  const handleDeleted = () => {
+    router.push("/jobs/history");
+  };
 
   useEffect(() => {
     const jobId = params.jobId;
@@ -90,7 +96,20 @@ export default function JobDetailPage() {
               Created {new Date(job.createdAt).toLocaleString()}
             </p>
           </div>
-          <StatusBadge status={job.status} />
+          <div className="flex items-center gap-3">
+            <StatusBadge status={job.status} />
+            <DeleteJobButton
+              jobId={job.id}
+              jobTitle={job.title}
+              variant="outline"
+              className="h-9 px-3 text-sm text-red-300 border-red-500/40 hover:bg-red-500/10"
+              disabled={
+                job.status === "processing" || job.status === "queued"
+              }
+              disabledHint="Wait for the render to finish before deleting."
+              onDeleted={handleDeleted}
+            />
+          </div>
         </div>
         <ProgressWithPercent value={job.progress} />
         {job.status === "queued" && typeof job.queuePosition === "number" && (

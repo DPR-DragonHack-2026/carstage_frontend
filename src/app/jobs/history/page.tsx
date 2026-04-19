@@ -19,8 +19,7 @@ export default function JobHistoryPage() {
     });
   }, []);
 
-  const handleDelete = async (jobId: string) => {
-    await jobService.deleteJob(jobId);
+  const handleDeleted = (jobId: string) => {
     setJobs((current) => current.filter((job) => job.id !== jobId));
   };
 
@@ -45,7 +44,7 @@ export default function JobHistoryPage() {
       ) : jobs.length ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} onDelete={handleDelete} />
+            <JobCard key={job.id} job={job} onDeleted={handleDeleted} />
           ))}
         </div>
       ) : (

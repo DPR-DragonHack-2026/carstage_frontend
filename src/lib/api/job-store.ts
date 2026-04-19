@@ -1,6 +1,8 @@
 import { APP_STORAGE_KEYS } from "@/lib/utils";
 import type { StoredImage } from "@/types/carstage";
 
+export type LocalJobTerminalStatus = "completed" | "failed";
+
 export interface LocalJobMetadata {
   jobId: string;
   title: string;
@@ -9,6 +11,14 @@ export interface LocalJobMetadata {
   logo?: StoredImage;
   licensePlate?: string;
   selectedBackgroundId: string;
+  /**
+   * Cached snapshot of the last terminal status we observed from the backend.
+   * Used so the history view can keep showing "completed" (and a 100% bar)
+   * even after the backend evicts the job and starts returning 404.
+   */
+  lastKnownStatus?: LocalJobTerminalStatus;
+  lastKnownFinishedAt?: string;
+  lastKnownError?: string;
 }
 
 function isBrowser(): boolean {

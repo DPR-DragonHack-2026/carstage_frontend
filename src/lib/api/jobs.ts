@@ -12,6 +12,7 @@ import {
   removeLocalJob,
   saveLocalJob,
   type LocalJobMetadata,
+  type LocalJobTerminalStatus,
 } from "@/lib/api/job-store";
 import type {
   BackgroundOption,
@@ -22,7 +23,7 @@ import type {
 
 const PROXY_BASE = "/api/showroom";
 
-class ShowroomApiError extends Error {
+export class ShowroomApiError extends Error {
   constructor(message: string, public status: number) {
     super(message);
     this.name = "ShowroomApiError";
@@ -122,6 +123,80 @@ async function fetchJobStatus(jobId: string): Promise<JobStatusResponse> {
   return (await response.json()) as JobStatusResponse;
 }
 
+function isTerminalStatus(
+  status: JobStatusResponse["status"]
+): status is LocalJobTerminalStatus {
+  return status === "completed" || status === "failed";
+}
+
+/**
+ * If the backend reports a terminal state, snapshot it onto the local record so
+ * future history loads can recover the same status even after the backend
+ * evicts the job (404s on subsequent fetches).
+ */
+function cacheTerminalStatus(
+  meta: LocalJobMetadata | undefined,
+  status: JobStatusResponse
+): void {
+  if (!meta || !isTerminalStatus(status.status)) {
+    return;
+  }
+  if (
+    meta.lastKnownStatus === status.status &&
+    meta.lastKnownFinishedAt === (status.finished_at ?? undefined) &&
+    meta.lastKnownError === (status.error ?? undefined)
+  ) {
+    return;
+  }
+  saveLocalJob({
+    ...meta,
+    lastKnownStatus: status.status,
+    lastKnownFinishedAt: status.finished_at ?? undefined,
+    lastKnownError: status.error ?? undefined,
+  });
+}
+
+/**
+ * Reconstruct a JobStatusResponse from the locally cached snapshot, used when
+ * the backend can no longer answer for this job_id.
+ */
+function fallbackStatusFromCache(
+  meta: LocalJobMetadata
+): JobStatusResponse {
+  const cached = meta.lastKnownStatus;
+  if (cached === "completed") {
+    return {
+      job_id: meta.jobId,
+      status: "completed",
+      queue_position: 0,
+      queued_count: 0,
+      created_at: meta.createdAt,
+      finished_at: meta.lastKnownFinishedAt ?? meta.createdAt,
+      result_ready: true,
+    };
+  }
+  if (cached === "failed") {
+    return {
+      job_id: meta.jobId,
+      status: "failed",
+      queue_position: 0,
+      queued_count: 0,
+      created_at: meta.createdAt,
+      finished_at: meta.lastKnownFinishedAt ?? meta.createdAt,
+      error: meta.lastKnownError,
+      result_ready: false,
+    };
+  }
+  return {
+    job_id: meta.jobId,
+    status: "queued",
+    queue_position: 0,
+    queued_count: 0,
+    created_at: meta.createdAt,
+    result_ready: false,
+  };
+}
+
 export async function listBackgrounds(): Promise<BackgroundOption[]> {
   return mockBackgrounds;
 }
@@ -136,19 +211,10 @@ export async function listJobs(): Promise<GenerationJob[]> {
     local.map(async (meta) => {
       try {
         const status = await fetchJobStatus(meta.jobId);
+        cacheTerminalStatus(meta, status);
         return toGenerationJob(status, meta);
       } catch {
-        return toGenerationJob(
-          {
-            job_id: meta.jobId,
-            status: "queued",
-            queue_position: 0,
-            queued_count: 0,
-            created_at: meta.createdAt,
-            result_ready: false,
-          },
-          meta
-        );
+        return toGenerationJob(fallbackStatusFromCache(meta), meta);
       }
     })
   );
@@ -162,23 +228,31 @@ export async function getJobById(jobId: string): Promise<GenerationJob | null> {
   const meta = getLocalJob(jobId);
   try {
     const status = await fetchJobStatus(jobId);
+    cacheTerminalStatus(meta, status);
     return toGenerationJob(status, meta);
   } catch (error) {
     if (error instanceof ShowroomApiError && error.status === 404) {
-      return meta
-        ? toGenerationJob(
-            {
-              job_id: jobId,
-              status: "failed",
-              queue_position: 0,
-              queued_count: 0,
-              created_at: meta.createdAt,
-              result_ready: false,
-              error: "Job not found on the backend.",
-            },
-            meta
-          )
-        : null;
+      if (!meta) {
+        return null;
+      }
+      // Backend forgot the job. Prefer the cached terminal snapshot if we have
+      // one (e.g. a previously completed render stays at 100%); only fall back
+      // to a synthesized "lost" failure when we have nothing better.
+      if (meta.lastKnownStatus) {
+        return toGenerationJob(fallbackStatusFromCache(meta), meta);
+      }
+      return toGenerationJob(
+        {
+          job_id: jobId,
+          status: "failed",
+          queue_position: 0,
+          queued_count: 0,
+          created_at: meta.createdAt,
+          result_ready: false,
+          error: "Job not found on the backend.",
+        },
+        meta
+      );
     }
     throw error;
   }
@@ -216,7 +290,26 @@ export async function createJob(
 }
 
 export async function deleteJob(jobId: string): Promise<void> {
-  removeLocalJob(jobId);
+  const response = await fetch(
+    `${PROXY_BASE}/jobs/${encodeURIComponent(jobId)}`,
+    { method: "DELETE" }
+  );
+
+  if (response.status === 204 || response.status === 404) {
+    // 204: backend confirmed deletion. 404: backend already lost it.
+    // Either way, drop our local copy.
+    removeLocalJob(jobId);
+    return;
+  }
+
+  if (response.status === 409) {
+    throw new ShowroomApiError(
+      "This job is still running. Wait for it to finish before deleting.",
+      409
+    );
+  }
+
+  throw new ShowroomApiError(await readError(response), response.status);
 }
 
 export const httpJobService: JobService = {
