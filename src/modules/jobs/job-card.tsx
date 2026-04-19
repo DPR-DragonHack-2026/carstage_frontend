@@ -12,7 +12,7 @@ import type { GenerationJob, StoredImage } from "@/types/carstage";
 interface JobCardProps {
   job: GenerationJob;
   onDeleted?: (jobId: string) => void;
-  /** When true, the first car thumbnail loads eagerly (LCP when this card is above the fold). */
+  /** When true, the first thumbnail loads eagerly (LCP when this card is above the fold). */
   priorityFirstImage?: boolean;
 }
 
